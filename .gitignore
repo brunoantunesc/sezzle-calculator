@@ -1,0 +1,25 @@
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Backend
+backend/coverage.out
+backend/coverage/
+*.test
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
