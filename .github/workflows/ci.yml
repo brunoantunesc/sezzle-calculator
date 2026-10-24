@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -30,8 +31,16 @@ jobs:
         run: |
           test -z "$(gofmt -l .)"
 
-      - name: Run tests
-        run: go test ./...
+      - name: Run tests with race detector
+        run: go test -race ./...
+
+      - name: Run tests with coverage
+        run: |
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
+
+      - name: Run Go vet
+        run: go vet ./...
 
       - name: Build
         run: go build ./...
@@ -55,6 +64,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
       - name: Build and type check
         run: npm run build
