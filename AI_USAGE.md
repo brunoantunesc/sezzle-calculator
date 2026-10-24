@@ -94,3 +94,13 @@ Instead of a text appearing briefly on the display, move it to the = sign, and i
 ## 2026-10-24T00:12:04.2977794-03:00 — GitHub Issue #3
 
 Great, now lets push for issue #3, The tests were written during the implementations, following TDD principles, but the issue description has a skeleton of what I thought were all the necessary tests for this app. Review what was done in comparison to what the issue asks for, plan any necessary new tests and implement them, and finish with a coverage report for frontend and backend.
+
+## 2026-10-24T00:55:55.1528024-03:00 — Requested issue #6 (Docker deployment)
+
+Now nearing the finish, lets go to issue #6.
+
+The Dockerfile must be multi-stage, with Go serving the static files to React and the API in the same container. Be careful about the headers and CSP to not block the SPA.
+
+Keep the solution simple without using docker compose or nginx, which is not necessary here.
+
+Issue lookup: GitHub #6 is a CI pull request; the matching Docker deployment issue is #11.

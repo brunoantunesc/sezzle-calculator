@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brunoantunesc/sezzle-calculator/backend/api"
+	"github.com/brunoantunesc/sezzle-calculator/backend/web"
 )
 
 func newServer() (*http.Server, error) {
@@ -23,9 +24,23 @@ func newServer() (*http.Server, error) {
 	if addr == "" {
 		addr = ":8080"
 	}
+	routes := api.NewHandler()
+	if directory := os.Getenv("STATIC_DIR"); directory != "" {
+		frontend, err := web.NewHandler(os.DirFS(directory))
+		if err != nil {
+			return nil, err
+		}
+		mux := http.NewServeMux()
+		mux.Handle("/api", routes)
+		mux.Handle("/api/", routes)
+		mux.Handle("/health", routes)
+		mux.Handle("/health/", routes)
+		mux.Handle("/", frontend)
+		routes = mux
+	}
 	return &http.Server{
 		Addr:              addr,
-		Handler:           api.Secure(api.NewHandler(), origin, time.Now),
+		Handler:           api.Secure(routes, origin, time.Now),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
