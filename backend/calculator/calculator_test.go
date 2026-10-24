@@ -13,6 +13,11 @@ func TestCalculate(t *testing.T) {
 		want            float64
 		err             error
 	}{
+		{"decimal rounding", "add", []float64{0.1, 0.2}, 0.3, nil},
+		{"irrational root", "sqrt", []float64{2}, math.Sqrt2, nil},
+		{"zero exponent", "power", []float64{2, 0}, 1, nil},
+		{"large exponent", "power", []float64{2, math.MaxFloat64}, 0, ErrInvalidResult},
+		{"large negative exponent", "power", []float64{2, -math.MaxFloat64}, 0, nil},
 		{"addition", "add", []float64{-2, 3.5}, 1.5, nil},
 		{"subtraction", "subtract", []float64{0, 4}, -4, nil},
 		{"multiplication", "multiply", []float64{-2, -3}, 6, nil},
@@ -43,7 +48,7 @@ func TestCalculate(t *testing.T) {
 			if !errors.Is(err, tt.err) {
 				t.Fatalf("error = %v, want %v", err, tt.err)
 			}
-			if err == nil && got != tt.want {
+			if err == nil && (math.IsNaN(got) || math.IsInf(got, 0) || math.Abs(got-tt.want) > 1e-12*math.Max(1, math.Abs(tt.want))) {
 				t.Errorf("result = %v, want %v", got, tt.want)
 			}
 		})
