@@ -56,9 +56,9 @@ func TestRateLimitConcurrent(t *testing.T) {
 }
 
 func TestRateLimitCapacity(t *testing.T) {
-	limiter := newLimiter(time.Now)
+	limiter := newLimiter(func() time.Time { return time.Unix(0, 0) })
 	for i := 0; i < maxClients; i++ {
-		limiter.entries[string(rune(i))] = clientWindow{expires: time.Now().Add(time.Minute)}
+		limiter.entries[string(rune(i))] = clientWindow{expires: time.Unix(0, 0).Add(time.Minute)}
 	}
 	if ok, _ := limiter.allow("new client"); ok {
 		t.Fatal("unbounded entries")
@@ -69,7 +69,7 @@ func TestRateLimitCapacity(t *testing.T) {
 }
 
 func TestSecurity(t *testing.T) {
-	handler := Secure(NewHandler(), "https://calculator.example", time.Now)
+	handler := Secure(NewHandler(), "https://calculator.example", func() time.Time { return time.Unix(0, 0) })
 	for _, tc := range []struct {
 		origin, method string
 		status         int
@@ -130,7 +130,7 @@ func TestPreflightRestrictions(t *testing.T) {
 		{"https://calculator.example", "POST", "Authorization", 405},
 		{"https://evil.example", "POST", "Content-Type", 405},
 	} {
-		h := Secure(NewHandler(), "https://calculator.example", time.Now)
+		h := Secure(NewHandler(), "https://calculator.example", func() time.Time { return time.Unix(0, 0) })
 		r := httptest.NewRequest("OPTIONS", "/api/v1/calculations", nil)
 		r.Header.Set("Origin", tc.origin)
 		r.Header.Set("Access-Control-Request-Method", tc.method)
@@ -144,7 +144,7 @@ func TestPreflightRestrictions(t *testing.T) {
 			t.Fatal("incorrect preflight headers")
 		}
 	}
-	h := Secure(NewHandler(), "", time.Now)
+	h := Secure(NewHandler(), "", func() time.Time { return time.Unix(0, 0) })
 	r := httptest.NewRequest("GET", "/health", nil)
 	r.Header.Set("Origin", "https://calculator.example")
 	w := httptest.NewRecorder()
@@ -209,7 +209,7 @@ func TestRetryAfterRemainingWindow(t *testing.T) {
 }
 
 func TestFrontendHeaders(t *testing.T) {
-	h := Secure(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }), "", time.Now)
+	h := Secure(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }), "", func() time.Time { return time.Unix(0, 0) })
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
 	if w.Header().Get("Content-Security-Policy") != "" || w.Header().Get("Cache-Control") != "" {

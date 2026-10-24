@@ -90,3 +90,7 @@ The history button should open a Drawer, you can use the MUI for this. Keep the 
 There needs to be a better handling of the loading, as small as it is.
 
 Instead of a text appearing briefly on the display, move it to the = sign, and instead of a text use a loading circle. Do not displace the equal sign during it, but make it disabled. Make sure that other buttons such as AC and the sqr one are clickable, but do not affect the current calculation. The loading should also have a minimum time before it appears, to avoid it appearing at every request even when it takes 100ms.
+
+## 2026-10-24T00:12:04.2977794-03:00 — GitHub Issue #3
+
+Great, now lets push for issue #3, The tests were written during the implementations, following TDD principles, but the issue description has a skeleton of what I thought were all the necessary tests for this app. Review what was done in comparison to what the issue asks for, plan any necessary new tests and implement them, and finish with a coverage report for frontend and backend.

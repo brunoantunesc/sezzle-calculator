@@ -6,7 +6,7 @@ it('caps history at 10, reloads it and filters malformed entries', () => {
  const {result,unmount}=renderHook(()=>useHistory())
  act(()=>{for(let i=0;i<12;i++) result.current.add(`value ${i}`,i)})
  expect(result.current.entries).toHaveLength(10)
- expect(result.current.entries[0].result).toBe(11)
+ expect(result.current.entries.map(entry=>entry.result)).toEqual([11,10,9,8,7,6,5,4,3,2])
  unmount()
  const restored=renderHook(()=>useHistory())
  expect(restored.result.current.entries).toHaveLength(10)

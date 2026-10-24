@@ -22,3 +22,15 @@ func TestServerConfiguration(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultServerConfiguration(t *testing.T) {
+	t.Setenv("ADDR", "")
+	t.Setenv("CORS_ALLOWED_ORIGIN", "")
+	server, err := newServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if server.Addr != ":8080" || server.Handler == nil {
+		t.Fatalf("invalid defaults: %+v", server)
+	}
+}
