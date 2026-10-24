@@ -1,72 +1,150 @@
-# Sezzle calculator frontend
 
-From this directory:
+# Sezzle Calculator
 
-```sh
-npm ci
-npm run dev
-npm test
-npm run lint
-npm run build
+A full-stack calculator built with React, TypeScript, and Go, supporting basic and advanced arithmetic operations through a REST API.
+
+## 1. Setup Instructions
+
+### Prerequisites
+
+- Node.js 22+
+- Go 1.27.3
+- Docker
+
+### Running the application
+
+Build and run the entire application in a single container:
+
+```bash
+docker build -t sezzle-calculator .
+docker run --rm -p 8080:8080 sezzle-calculator
 ```
 
-The SPA uses React, TypeScript, MUI and Vite. `dist/` contains static production
-assets. Run `npm run preview` to inspect a production build locally.
+Open `http://localhost:8080`.
 
-## Current scope
+### Testing and Coverage
 
-Calculations use the Go API through a dedicated typed service, with relative
-`/api/v1/calculations` requests. No arithmetic is performed in the frontend.
-Start the Go server with `go run .` in `backend`, then start Vite here. The Vite
-proxy forwards `/api` to `http://127.0.0.1:8080`; production uses the same-origin
-`/api` endpoint. `npm run preview` only serves static assets, so API-backed preview
-requires a same-origin reverse proxy.
+Backend:
 
-The service validates response shapes and finite results, parses recognized API
-error codes/messages, and handles network failures and a 10-second timeout.
-Server failures use a generic message rather than exposing internal details.
-Errors appear in bottom-center notices with a close button and six-second expiry
-(paused while hovered or the browser is inactive by MUI). Input remains editable.
+```bash
+cd backend
+go test ./...
+go test -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out
+```
 
-`useCalculator` accepts an asynchronous `Calculate` function; tests inject mock
-responses to verify requests, chaining, loading, failures, duplicate prevention and
-stale-response handling. Unmounting invalidates pending work; late responses cannot replace
-new input or enter history.
+Frontend:
 
-History keeps the last 10 successful calculations in localStorage, newest first,
-with expression, result and timestamp. Entries can be reused and history cleared.
-Invalid or unavailable storage is handled without preventing calculations.
-The MUI Drawer opens from the right at 600px and above, or from the bottom on
-mobile. It is size-limited and scrollable, with focus trapping/restoration and
-close-button, backdrop and Escape dismissal. Calculator shortcuts are suspended
-while history is open; closing it preserves input.
+```bash
+cd frontend
+npm ci
+npm run test:coverage
+```
 
-## Interface and input
+Both applications are also validated automatically through GitHub Actions.
 
-- `Calculator`, `Display` and `Keypad` separate composition from presentation.
-- Inputs remain strings until submission, preserving `0.` and decimal zeros.
-- Entry is limited to 16 digits for usability. This does not guarantee decimal
-  precision: submission uses JavaScript numbers to match the backend float64 contract.
-- Returned numbers use their original JavaScript string representation, without
-  rounding or truncation. Long values shrink and wrap to avoid layout overflow.
-- Binary operations chain sequentially, without expression parsing or precedence.
-  Selecting another operator before entry replaces the pending operator. Equals
-  waits for a second operand and does not repeat the last calculation.
-- Square root submits the current displayed operand immediately. When editing
-  a second operand, its returned root becomes that operand.
-- Digits after a result begin a new entry; an operator reuses the result.
-- While pending, equals is disabled. Other keys retain tactile feedback but all input, including AC and square root, is ignored until the request settles. Failed requests preserve editable input.
+## 2. API Examples
 
-Keyboard: digits, `.`, `+`, `-`, `*` or `x`, `/`, `^`, `r` for square root,
-Enter or `=` for equals, Backspace, Escape or Delete for AC. Modifiers and editable
-fields are left alone. Enter/Space on a focused button retain native activation.
-Keyboard-held keys receive the same visual depression as pointer-held buttons;
-release or window blur removes it. Tab navigation has visible focus outlines.
+The backend exposes a stateless REST API for arithmetic operations.
 
-Layout was checked at 320px and 390px mobile widths and a 1280×800 desktop viewport.
-Narrow/short screens can scroll vertically. Reduced-motion preferences are respected.
+### Endpoints
 
-Vitest and React Testing Library run in jsdom. The unused nested `frontend/`
-scaffold is excluded from this app's lint scope, without modifying its contents.
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/calculations` | Execute an arithmetic operation |
+| GET | `/health` | Check service availability |
 
-Loading uses a spinner beside the centered equals sign only after 200ms. Faster requests never show it; each request owns a cancellable delay. There is no artificial minimum request duration.
+### Supported Operations
+
+| Operation | Identifier | Operands |
+|---|---|---|
+| Addition | `add` | 2 |
+| Subtraction | `subtract` | 2 |
+| Multiplication | `multiply` | 2 |
+| Division | `divide` | 2 |
+| Exponentiation | `power` | 2 |
+| Square root | `sqrt` | 1 |
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:8080/api/v1/calculations \
+  -H "Content-Type: application/json" \
+  -d '{"operation":"power","operands":[2,10]}'
+```
+
+Successful response (`200 OK`):
+
+```json
+{
+  "result": 1024
+}
+```
+
+Square root example:
+
+```json
+{
+  "operation": "sqrt",
+  "operands": [81]
+}
+```
+
+Response:
+
+```json
+{
+  "result": 9
+}
+```
+
+### Error Handling
+
+Invalid calculations return a consistent JSON error structure.
+
+Example: division by zero (`422 Unprocessable Content`).
+
+```json
+{
+  "error": {
+    "code": "DIVISION_BY_ZERO",
+    "message": "Cannot divide by zero"
+  }
+}
+```
+
+The API validates input types, supported operations, operand counts, and numerical results. Invalid requests return appropriate HTTP status codes.
+
+## 3. Design Decisions
+
+### Go Backend
+
+The backend uses `net/http` and `encoding/json`, avoiding unnecessary frameworks and external dependencies.
+
+Arithmetic logic is separated from HTTP handling to keep the implementation testable and maintainable.
+
+### React SPA
+
+The frontend uses React, TypeScript, Vite, and Material UI.
+
+A single-page application was chosen because the calculator requires only one interactive view, without routing or server-side rendering.
+
+All mathematical operations are performed by the Go backend, while React manages user interactions and presentation.
+
+### Stateless Architecture
+
+The backend does not require a database or authentication.
+
+Each calculation is independent, and the frontend stores the 10 most recent successful calculations in browser `localStorage`.
+
+### Security and Validation
+
+The API treats all incoming requests as untrusted, applying strict JSON validation, request size limits, numerical overflow checks, HTTP timeouts, CORS restrictions, and basic rate limiting.
+
+The application uses `float64` arithmetic, which is appropriate for a general-purpose calculator but does not provide exact decimal precision for financial calculations.
+
+### Deployment
+
+A multi-stage Docker build compiles the React frontend and Go backend into a single runtime container.
+
+The Go server serves both the REST API and the compiled React application under the same origin, simplifying deployment and avoiding cross-origin requests in production.
