@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -81,7 +82,21 @@ func TestHandler(t *testing.T) {
 			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 				t.Fatal(err)
 			}
+			var envelope map[string]json.RawMessage
+			if err := json.Unmarshal(w.Body.Bytes(), &envelope); err != nil {
+				t.Fatal(err)
+			}
+			if len(envelope) != 1 {
+				t.Fatalf("unexpected response fields: %s", w.Body.String())
+			}
 			if tc.code != "" {
+				var detail map[string]string
+				if err := json.Unmarshal(envelope["error"], &detail); err != nil {
+					t.Fatal(err)
+				}
+				if len(detail) != 2 {
+					t.Fatalf("unexpected error fields: %s", w.Body.String())
+				}
 				if response.Error == nil || response.Error.Code != tc.code || response.Error.Message == "" {
 					t.Fatalf("unexpected error: %s", w.Body.String())
 				}
@@ -132,5 +147,36 @@ func TestRequestFieldsDocument(t *testing.T) {
 	}
 	if _, ok := requestFields([]byte(`{} `)); !ok {
 		t.Fatal("rejected closed object with whitespace")
+	}
+}
+
+// Simulates a disconnected client while the handler is reading the body.
+type failedBody struct{}
+
+func (failedBody) Read([]byte) (int, error) { return 0, errors.New("private transport details") }
+func (failedBody) Close() error             { return nil }
+
+func TestReadFailureAndRecovery(t *testing.T) {
+	handler := NewHandler()
+	request := httptest.NewRequest("POST", "/api/v1/calculations", nil)
+	request.Header.Set("Content-Type", "application/json")
+	request.Body = failedBody{}
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != 400 || response.Body.String() != "{\"error\":{\"code\":\"INVALID_REQUEST\",\"message\":\"Cannot read request body\"}}\n" {
+		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
+	}
+	for _, body := range []string{`{"operation":"power","operands":[2,1e308]}`, `{"operation":"divide","operands":[10,2]}`} {
+		request = httptest.NewRequest("POST", "/api/v1/calculations", strings.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		response = httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if strings.Contains(body, "power") {
+			if response.Code != 422 {
+				t.Fatal(response.Body.String())
+			}
+		} else if response.Code != 200 || response.Body.String() != "{\"result\":5}\n" {
+			t.Fatal(response.Body.String())
+		}
 	}
 }

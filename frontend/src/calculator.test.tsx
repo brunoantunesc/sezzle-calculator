@@ -176,3 +176,29 @@ it('records successful calculations, reuses results and clears history', async (
  expect(screen.getByRole('dialog')).toHaveTextContent('No calculations yet.')
  expect(JSON.parse(localStorage.getItem('calculator-history')!)).toEqual([])
 })
+
+it.each(['resolve','reject'])('ignores a stale %s after unmount',async mode=>{
+ let resolve!:(value:number)=>void
+ let reject!:(error:Error)=>void
+ const calculate=vi.fn(()=>new Promise<number>((done,fail)=>{resolve=done;reject=fail}))
+ const onSuccess=vi.fn()
+ const old=renderHook(()=>useCalculator(calculate,onSuccess))
+ act(()=>old.result.current.press('sqrt'))
+ old.unmount()
+ const fresh=renderHook(()=>useCalculator(vi.fn().mockResolvedValue(7)))
+ await act(async()=>fresh.result.current.press('sqrt'))
+ await act(async()=>{if(mode==='resolve') resolve(99);else reject(new CalculationError('old error'))})
+ expect(fresh.result.current.display).toBe('7')
+ expect(fresh.result.current.error).toBe('')
+ expect(onSuccess).not.toHaveBeenCalled()
+})
+
+it('has accessible button names and ignores shortcuts in editable fields',()=>{
+ render(<App />)
+ for(const button of screen.getAllByRole('button')) expect(button).toHaveAccessibleName()
+ const input=document.createElement('input');document.body.append(input)
+ fireEvent.keyDown(input,{key:'8'})
+ fireEvent.keyDown(window,{key:'9',ctrlKey:true})
+ expect(screen.getByRole('status')).toHaveTextContent('0')
+ input.remove()
+})

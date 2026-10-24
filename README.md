@@ -31,3 +31,7 @@ bounded and are reclaimed on the next request; no cleanup goroutine is needed.
 A 429 response includes `Retry-After` rounded up to the seconds remaining in that IP window. At map capacity, new IPs wait until the next scheduled cleanup.
 These controls provide basic abuse protection, not comprehensive DDoS protection.
 
+
+## Tests and coverage
+
+See [TESTING.md](TESTING.md) for the issue #3 audit, reproducible commands, measured coverage and full-stack smoke procedure.
